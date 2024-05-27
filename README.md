@@ -14,10 +14,7 @@ You can add the `Okai.OFX` library to your .NET project. Be sure to add the refe
 `Okai.OFX` library can be integrated into a larger project to process OFX files, as shown in the example below.
 
 #### Simple Integration Example
-
-#### File Receipt
-
-Assuming you have an OFX file content in string format (ofxString), here's how you can utilize the Okai.OFX library to process it.
+Assuming you have an OFX file content in string format (`ofxString`), here's how you can utilize the Okai.OFX library to process it.
 
 ```csharp
 using Okai.OFX; // Import the Okai.OFX namespace
