@@ -8,7 +8,7 @@
 - Analyzes OFX files and extracts detailed financial transactions.
 
 ### Installation
-You can add the Okai.OFX library to your .NET project. Be sure to add the reference to your project and include the required namespaces.
+You can add the `Okai.OFX` library to your .NET project. Be sure to add the reference to your project and include the required namespaces.
 
 ### Example of Use in a Project
 The `Okai.OFX` library can be integrated into a larger project to process OFX files, as shown in the example below.
