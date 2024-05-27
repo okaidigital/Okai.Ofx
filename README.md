@@ -1,5 +1,5 @@
 # Okai.OFX
-## The Okai.OFX library is used to analyze OFX files and extract financial transactions. OFX (Open Financial Exchange) is a common format for exchanging financial information between financial institutions and financial applications.
+## The Okai.OFX Library is used to analyze OFX files and extract financial transactions. OFX (Open Financial Exchange) is a common format for exchanging financial information between financial institutions and financial applications.
 
 ## .NET version
 .NET 8
