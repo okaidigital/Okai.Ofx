@@ -1,46 +1,66 @@
-﻿using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace Cofactory.OFX
+namespace Okai.Ofx;
+
+public class OfxDocument
 {
-    public class OfxDocument
+    private const string OfxStartTag = "<OFX>";
+    private const string TransactionStartTag = "<STMTTRN>";
+    private static readonly Regex TransactionRegex = new(
+        @"<STMTTRN>.*?(?=<STMTTRN>|</BANKTRANLIST>|</CREDITCARDMSGSRSV1>|</OFX>|$)",
+        RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.Compiled);
+
+    public string Headers { get; private set; } = string.Empty;
+    public string BeforeBody { get; private set; } = string.Empty;
+    public Transaction[] Transactions { get; private set; } = Array.Empty<Transaction>();
+
+    public OfxDocument(string ofxContent)
     {
-        public string Headers { get; private set; }
-        public string BeforeBody { get; private set; }
-        public Transaction[] Transactions { get; private set; }
-
-        public OfxDocument(string ofxContent)
+        if (string.IsNullOrWhiteSpace(ofxContent))
         {
-            ParseContent(ofxContent);
+            throw new ArgumentException("OFX content cannot be empty.", nameof(ofxContent));
         }
 
-        private void ParseContent(string content)
+        ParseContent(ofxContent);
+    }
+
+    public void AddTransaction(Transaction transaction)
+    {
+        ArgumentNullException.ThrowIfNull(transaction);
+        Transactions = Transactions.Concat(new[] { transaction }).ToArray();
+    }
+
+    public Transaction[] Result()
+    {
+        return Transactions;
+    }
+
+    private void ParseContent(string content)
+    {
+        var sgmlStart = content.IndexOf(OfxStartTag, StringComparison.OrdinalIgnoreCase);
+
+        if (sgmlStart < 0)
         {
-            int sgmlStart = content.IndexOf("<OFX>");
-
-            if (sgmlStart < 0)
-            {
-                throw new Exception("Arquivo OFX inválido. Verifique se o mesmo esta sendo enviado no formato correto.");
-            }
-
-            Headers = content.Substring(0, sgmlStart);
-            content = content.Substring(sgmlStart);
-
-            int startBody = content.IndexOf("<STMTTRN>");
-            string body = content.Substring(startBody);
-            BeforeBody = content.Substring(0, startBody);
-
-            string[] transactions = Regex.Split(body, @"(?=<STMTTRN>)");
-            Transactions = transactions.Select(t => new Transaction(t)).ToArray();
+            throw new FormatException("Invalid OFX content: missing <OFX> tag.");
         }
 
-        public void AddTransaction(Transaction transaction)
+        Headers = content[..sgmlStart];
+        var ofxBody = content[sgmlStart..];
+
+        var firstTransactionStart = ofxBody.IndexOf(TransactionStartTag, StringComparison.OrdinalIgnoreCase);
+        if (firstTransactionStart < 0)
         {
-            Transactions = Transactions.Concat(new[] { transaction }).ToArray();
+            BeforeBody = ofxBody;
+            Transactions = Array.Empty<Transaction>();
+            return;
         }
-        public Transaction[] Result()
-        {
-            return Transactions;
-        }
+
+        BeforeBody = ofxBody[..firstTransactionStart];
+        var transactionBody = ofxBody[firstTransactionStart..];
+
+        Transactions = TransactionRegex
+            .Matches(transactionBody)
+            .Select(match => new Transaction(match.Value))
+            .ToArray();
     }
 }

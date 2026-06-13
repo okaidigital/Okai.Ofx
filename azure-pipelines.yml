@@ -9,19 +9,23 @@ variables:
 
 steps:
 - task: UseDotNet@2
-  displayName: 'Use .NET Core sdk'
+  displayName: 'Use .NET SDK'
   inputs:
     packageType: sdk
-    version: 6.x
+    version: 8.x
     installationPath: $(Agent.ToolsDirectory)/dotnet
     
 - script: dotnet restore
   displayName: 'dotnet restore'
 
-- script: dotnet build --configuration $(buildConfiguration) -o $(Build.ArtifactStagingDirectory)
+- script: dotnet build --configuration $(buildConfiguration) --no-restore -o $(Build.ArtifactStagingDirectory)
   displayName: 'dotnet build $(buildConfiguration)'
 
+- script: dotnet test --configuration $(buildConfiguration) --no-build
+  displayName: 'dotnet test $(buildConfiguration)'
+
 - task: NuGetCommand@2
+  displayName: 'push NuGet package'
   inputs:
     command: 'push'
     packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'

@@ -1,60 +1,66 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace Cofactory.OFX
+namespace Okai.Ofx;
+
+public class Transaction
 {
-    public class Transaction
+    public string TransactionType { get; set; }
+    public DateTime PostedDate { get; set; }
+    public decimal TransactionAmount { get; set; }
+    public decimal Amount => TransactionAmount;
+    public string FitId { get; set; }
+    public string CheckNumber { get; set; }
+    public string Memo { get; set; }
+    public string RawContent { get; set; }
+
+    public Transaction(string content)
     {
-        public string TransactionType { get; set; }
-        public DateTime PostedDate { get; set; }
-        public decimal TransactionAmount { get; set; }
-        public string FitId { get; set; }
-        public string CheckNumber { get; set; }
-        public string Memo { get; set; }
-        public string RawContent { get; set; }
-
-        public Transaction(string content)
+        if (string.IsNullOrWhiteSpace(content))
         {
-            RawContent = content;
-            TransactionType = GetValueFromContent("TRNTYPE");
-            PostedDate = ParsePostedDate(GetValueFromContent("DTPOSTED"));
-            TransactionAmount = ParseTransactionAmount(GetValueFromContent("TRNAMT"));
-            FitId = GetValueFromContent("FITID");
-            CheckNumber = GetValueFromContent("CHECKNUM");
-            Memo = GetValueFromContent("MEMO");
-        }
-        private string GetValueFromContent(string tagName)
-        {
-            var match = Regex.Match(RawContent, $"<{tagName}>(.*?)(<|\n)", RegexOptions.Singleline);
-            if (match.Success)
-            {
-                return match.Groups[1].Value.Trim();
-            }
-            return null;
+            throw new ArgumentException("Transaction content cannot be empty.", nameof(content));
         }
 
-        private DateTime ParsePostedDate(string rawDate)
+        RawContent = content;
+        TransactionType = GetValueFromContent("TRNTYPE");
+        PostedDate = ParsePostedDate(GetValueFromContent("DTPOSTED"));
+        TransactionAmount = ParseTransactionAmount(GetValueFromContent("TRNAMT"));
+        FitId = GetValueFromContent("FITID");
+        CheckNumber = GetValueFromContent("CHECKNUM");
+        Memo = GetValueFromContent("MEMO");
+    }
+
+    private string GetValueFromContent(string tagName)
+    {
+        var match = Regex.Match(
+            RawContent,
+            $"<{Regex.Escape(tagName)}>(.*?)(?=<|\\r?\\n|$)",
+            RegexOptions.IgnoreCase | RegexOptions.Singleline);
+
+        return match.Success ? match.Groups[1].Value.Trim() : string.Empty;
+    }
+
+    private static DateTime ParsePostedDate(string rawDate)
+    {
+        if (rawDate.Length < 14)
         {
-            if (rawDate != null && rawDate.Length >= 14)
-            {
-                return DateTime.ParseExact(rawDate.Substring(0, 14), "yyyyMMddHHmmss", CultureInfo.InvariantCulture);
-            }
-            else
-            {
-                return DateTime.MinValue;
-            }
+            return DateTime.MinValue;
         }
 
-        private decimal ParseTransactionAmount(string rawAmount)
-        {
-            if (!string.IsNullOrEmpty(rawAmount))
-            {
-                return decimal.Parse(rawAmount, CultureInfo.InvariantCulture);
-            }
-            else
-            {
-                return 0;
-            }
-        }
+        return DateTime.TryParseExact(
+            rawDate[..14],
+            "yyyyMMddHHmmss",
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.None,
+            out var postedDate)
+            ? postedDate
+            : DateTime.MinValue;
+    }
+
+    private static decimal ParseTransactionAmount(string rawAmount)
+    {
+        return decimal.TryParse(rawAmount, NumberStyles.Number, CultureInfo.InvariantCulture, out var amount)
+            ? amount
+            : 0m;
     }
 }
